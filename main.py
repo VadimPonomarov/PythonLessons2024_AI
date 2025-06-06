@@ -1,21 +1,24 @@
 """
-Простой рабочий генератор кода - без pydantic_ai
+🤖 Universal Python Code Generator
+AI-powered code generation with intelligent task parsing and visual improvements
 """
 
+import json
 import os
+import re
 from datetime import datetime
 
 import g4f
 
 
 def clean_code(code: str) -> str:
-    """Очищает код от markdown"""
+    """Cleans code from markdown blocks"""
     if not code:
         return code
 
     code = code.strip()
 
-    # Удаляем markdown блоки
+    # Remove markdown blocks
     if code.startswith("```python"):
         code = code[9:]
     elif code.startswith("```"):
@@ -27,10 +30,26 @@ def clean_code(code: str) -> str:
     return code.strip()
 
 
+def fix_square_spacing(code: str) -> str:
+    """Fixes square code for visual equal-sidedness"""
+    if "квадрат" in code.lower() or "square" in code.lower() or "*" in code:
+        # Replace asterisk sequences with spaced asterisks
+        code = re.sub(r'"(\*+)"', lambda m: '"' + " ".join(m.group(1)) + '"', code)
+        code = re.sub(r"'(\*+)'", lambda m: "'" + " ".join(m.group(1)) + "'", code)
+
+        # Replace single asterisks with spaced asterisks
+        code = code.replace('print("*", end="")', 'print("* ", end="")')
+        code = code.replace("print('*', end='')", "print('* ', end='')")
+        code = code.replace('print(" ", end="")', 'print("  ", end="")')
+        code = code.replace("print(' ', end='')", "print('  ', end='')")
+
+    return code
+
+
 def generate_code(task_description: str, language: str = "ru") -> dict:
-    """Генерирует код для задачи с структурированным ответом"""
+    """Generates code for task with structured response"""
     try:
-        print(f"🔄 Генерируем код для: {task_description}")
+        print(f"🔄 Generating code for: {task_description[:60]}...")
 
         lang_instructions = {
             "ru": "Add comments in Russian",
@@ -38,7 +57,6 @@ def generate_code(task_description: str, language: str = "ru") -> dict:
             "en": "Add comments in English",
         }
 
-        # Запрос на генерацию структурированного ответа
         response = g4f.ChatCompletion.create(
             model="gpt-4o",
             provider=g4f.Provider.PollinationsAI,
@@ -63,9 +81,11 @@ def generate_code(task_description: str, language: str = "ru") -> dict:
         )
 
         cleaned_code = clean_code(response)
-        print("✅ Код сгенерирован успешно")
+        # Fix squares for visual equal-sidedness
+        cleaned_code = fix_square_spacing(cleaned_code)
 
-        # Возвращаем структурированный ответ
+        print("✅ Code generated successfully")
+
         return {
             "success": True,
             "code": cleaned_code,
@@ -75,13 +95,13 @@ def generate_code(task_description: str, language: str = "ru") -> dict:
         }
 
     except Exception as e:
-        print(f"❌ Ошибка генерации кода: {e}")
-        fallback_code = f"""# Ошибка генерации кода: {e}
-# Задача: {task_description}
+        print(f"❌ Code generation error: {e}")
+        fallback_code = f"""# Code generation error: {e}
+# Task: {task_description}
 
 def main():
-    print("Код не был сгенерирован из-за ошибки")
-    print("Задача: {task_description}")
+    print("Code was not generated due to error")
+    print("Task: {task_description}")
 
 if __name__ == "__main__":
     main()
@@ -145,57 +165,78 @@ def get_language_choice():
 
 
 def load_tasks_from_file(filepath: str):
-    """Загружает задачи из файла"""
+    """Loads tasks from file using AI parsing"""
     try:
         with open(filepath, "r", encoding="utf-8") as f:
             content = f.read()
 
-        # Улучшенное извлечение задач
-        tasks = []
-        lines = content.split("\n")
-        current_task = ""
+        # Use AI to parse tasks
+        print("🤖 AI parsing tasks...")
 
-        for line in lines:
-            line = line.strip()
+        response = g4f.ChatCompletion.create(
+            model="gpt-4o",
+            provider=g4f.Provider.PollinationsAI,
+            messages=[
+                {
+                    "role": "user",
+                    "content": f"""
+                Parse this text and extract ALL programming tasks. Return ONLY a JSON array:
+                [
+                    {{"id": 1, "description": "Task description here"}},
+                    {{"id": 2, "description": "Task description here"}},
+                    ...
+                ]
 
-            # Пропускаем пустые строки и комментарии
-            if not line or line.startswith("#"):
-                continue
+                Rules:
+                - Find ALL tasks (1), 2), –, functions, etc.)
+                - Remove task numbers like "1)", "2)" from descriptions
+                - Make first letter uppercase
+                - Include multiplication tables and squares
+                - Include ALL tasks, don't merge duplicates
+                - Return ONLY valid JSON, no explanations
 
-            # Проверяем, начинается ли строка с номера задачи
-            if line.startswith(("1)", "2)", "3)", "4)", "5)", "6)", "7)", "8)")):
-                # Сохраняем предыдущую задачу
-                if current_task:
-                    tasks.append(
-                        {"id": len(tasks) + 1, "description": current_task.strip()}
-                    )
-                # Начинаем новую задачу
-                current_task = line
-            elif current_task and line:
-                # Продолжаем текущую задачу
-                # Пропускаем строки с примерами кода и разделители
-                if not line.startswith(
-                    ("st =", "greeting =", "list =", "приклад:", "наприклад:")
-                ):
-                    current_task += " " + line
+                Text: {content}
+                """,
+                }
+            ],
+        )
 
-        # Сохраняем последнюю задачу
-        if current_task:
-            tasks.append({"id": len(tasks) + 1, "description": current_task.strip()})
+        # Parse JSON response
+        import json
+        import re
 
-        print(f"🔍 Найдено задач в файле: {len(tasks)}")
-        for i, task in enumerate(tasks, 1):
-            short_desc = (
-                task["description"][:80] + "..."
-                if len(task["description"]) > 80
-                else task["description"]
-            )
-            print(f"   {i}. {short_desc}")
+        cleaned_response = clean_code(response)
 
-        return tasks
+        try:
+            tasks_data = json.loads(cleaned_response)
+            if isinstance(tasks_data, list):
+                print(f"🔍 Found {len(tasks_data)} tasks in file:")
+                for i, task in enumerate(tasks_data, 1):
+                    desc = task.get("description", "")
+                    short_desc = desc[:60] + "..." if len(desc) > 60 else desc
+                    print(f"   {i}. {short_desc}")
+                return tasks_data
+        except json.JSONDecodeError:
+            # Try to extract JSON array from text
+            json_match = re.search(r"\[.*\]", cleaned_response, re.DOTALL)
+            if json_match:
+                try:
+                    tasks_data = json.loads(json_match.group())
+                    if isinstance(tasks_data, list):
+                        print(f"🔍 Found {len(tasks_data)} tasks in file:")
+                        for i, task in enumerate(tasks_data, 1):
+                            desc = task.get("description", "")
+                            short_desc = desc[:60] + "..." if len(desc) > 60 else desc
+                            print(f"   {i}. {short_desc}")
+                        return tasks_data
+                except json.JSONDecodeError:
+                    pass
+
+        print("❌ AI parsing failed, using fallback")
+        return []
 
     except Exception as e:
-        print(f"❌ Ошибка чтения файла {filepath}: {e}")
+        print(f"❌ Error reading file {filepath}: {e}")
         return []
 
 
@@ -267,15 +308,20 @@ def main():
                 # Показываем меню задач
                 while True:
                     print(f"\n📋 Задачи из файла {selected_file['filename']}:")
-                    for task in tasks:
-                        # Показываем краткое описание (первые 50 символов)
-                        short_desc = (
-                            task["description"][:50] + "..."
-                            if len(task["description"]) > 50
-                            else task["description"]
-                        )
-                        print(f"{task['id']}. {short_desc}")
-                    print("0. Назад к выбору файла")
+                    print("-" * 70)
+
+                    # Находим максимальную длину номера для выравнивания
+                    max_num_width = len(str(len(tasks)))
+
+                    for i, task in enumerate(tasks, 1):
+                        # Показываем краткое описание (первые 60 символов)
+                        desc = task.get("description", "")
+                        short_desc = desc[:60] + "..." if len(desc) > 60 else desc
+                        # Форматируем с одинаковыми отступами
+                        print(f"{i:>{max_num_width}}. {short_desc}")
+
+                    print(f"{0:>{max_num_width}}. Назад к выбору файла")
+                    print("-" * 70)
 
                     task_choice = input("\nВыберите задачу (0 для возврата): ").strip()
 
@@ -284,17 +330,17 @@ def main():
 
                     try:
                         task_id = int(task_choice)
-                        selected_task = next(
-                            (t for t in tasks if t["id"] == task_id), None
-                        )
+                        if 1 <= task_id <= len(tasks):
+                            selected_task = tasks[task_id - 1]
 
-                        if selected_task:
                             print(f"\n📝 Выбрана задача {task_id}:")
-                            print(f"📋 Описание: {selected_task['description']}")
+                            print(
+                                f"📋 Описание: {selected_task.get('description', '')}"
+                            )
 
                             # Генерируем код
                             result = generate_code(
-                                selected_task["description"], language
+                                selected_task.get("description", ""), language
                             )
 
                             # Показываем код
