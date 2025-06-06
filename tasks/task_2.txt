@@ -1,0 +1,21 @@
+Advanced Python Programming Tasks
+
+1. Create a class-based implementation of a simple banking system with Account, SavingsAccount, and CheckingAccount classes.
+
+2. Implement a decorator that measures and prints the execution time of any function.
+
+3. Write a context manager that handles file operations with automatic cleanup and error handling.
+
+4. Create a generator function that yields Fibonacci numbers up to a given limit.
+
+5. Implement a simple web scraper using requests and BeautifulSoup to extract data from a webpage.
+
+6. Build a command-line calculator that can handle complex mathematical expressions with parentheses.
+
+7. Create a multi-threaded program that downloads multiple files concurrently.
+
+8. Implement a simple caching mechanism using decorators and functools.
+
+9. Write a program that analyzes text files and generates word frequency statistics.
+
+10. Create a REST API client that can perform CRUD operations on a remote service.
