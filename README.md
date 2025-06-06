@@ -36,8 +36,11 @@ This is the main entry point that includes:
 ├── 📁 tasks/                   # Task files directory
 │   ├── 📄 task_1.txt          # Programming tasks (Ukrainian) - 17+ tasks
 │   └── 📄 task_2.txt          # Additional tasks
-├── 📁 generated_code/          # Output directory for generated code
-│   └── 📄 *.py                 # Generated Python files
+├── 📁 generated_code/          # Output directory for YOUR generated code
+│   └── 📄 *.py                 # Your generated Python files
+├── 📁 demo_files/              # Demonstration and example files
+│   ├── 📄 README.md           # Demo documentation
+│   └── 📄 demo_*.py           # Example generated code
 ├── 📁 agents/                  # AI agent modules (advanced features)
 │   ├── 📄 fixed_pollinations.py # Fixed PollinationsAI provider
 │   └── 📄 universal_agents.py   # Universal AI agents
@@ -50,6 +53,7 @@ This is the main entry point that includes:
 
 **For beginners**: You only need `main.py` and the `tasks/` folder!
 **For advanced users**: Explore `agents/` and `core/` for extensibility.
+**For examples**: Check `demo_files/` to see what the system can generate.
 
 ## 🛠️ Installation
 
@@ -227,6 +231,8 @@ From `task_1.txt`, the AI finds **17+ tasks** including:
 - ✅ Error handling and edge cases
 - ✅ Python best practices
 - ✅ Complete working solutions
+
+**See examples**: Check the `demo_files/` folder for sample generated code!
 
 ## 🚨 Troubleshooting
 
