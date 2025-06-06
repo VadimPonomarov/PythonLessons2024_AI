@@ -9,7 +9,10 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "g4f (>=0.5.3.2,<0.6.0.0)",
-    "pydantic-ai>=0.2.14"
+    "pydantic-ai>=0.2.14",
+    "langchain>=0.1.0",
+    "langchain-community>=0.0.10",
+    "langchain-core>=0.1.0"
 ]
 
 

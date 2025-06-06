@@ -1,152 +1,16 @@
 """
 🤖 Universal Python Code Generator
-AI-powered code generation with intelligent task parsing and visual improvements
+AI-powered code generation with LangChain + G4F integration
 """
 
-import json
 import os
-import re
 from datetime import datetime
 
-import g4f
-
-
-def clean_code(code: str) -> str:
-    """Cleans code from markdown blocks"""
-    if not code:
-        return code
-
-    code = code.strip()
-
-    # Remove markdown blocks
-    if code.startswith("```python"):
-        code = code[9:]
-    elif code.startswith("```"):
-        code = code[3:]
-
-    if code.endswith("```"):
-        code = code[:-3]
-
-    return code.strip()
-
-
-def fix_square_spacing(code: str) -> str:
-    """Fixes square code for visual equal-sidedness"""
-    if "квадрат" in code.lower() or "square" in code.lower() or "*" in code:
-        # Replace asterisk sequences with spaced asterisks
-        code = re.sub(r'"(\*+)"', lambda m: '"' + " ".join(m.group(1)) + '"', code)
-        code = re.sub(r"'(\*+)'", lambda m: "'" + " ".join(m.group(1)) + "'", code)
-
-        # Replace single asterisks with spaced asterisks
-        code = code.replace('print("*", end="")', 'print("* ", end="")')
-        code = code.replace("print('*', end='')", "print('* ', end='')")
-        code = code.replace('print(" ", end="")', 'print("  ", end="")')
-        code = code.replace("print(' ', end='')", "print('  ', end='')")
-
-    return code
-
-
-def generate_code(task_description: str, language: str = "ru") -> dict:
-    """Generates code for task with structured response"""
-    try:
-        print(f"🔄 Generating code for: {task_description[:60]}...")
-
-        lang_instructions = {
-            "ru": "Add comments in Russian",
-            "uk": "Add comments in Ukrainian",
-            "en": "Add comments in English",
-        }
-
-        response = g4f.ChatCompletion.create(
-            model="gpt-4o",
-            provider=g4f.Provider.PollinationsAI,
-            messages=[
-                {
-                    "role": "user",
-                    "content": f"""
-                Generate Python code for this task: {task_description}
-
-                Requirements:
-                - Clean, executable Python code
-                - {lang_instructions.get(language, "Add comments in Russian")}
-                - Use Python best practices
-                - NO markdown blocks
-                - NO explanations, only code
-                - Create complete working solution
-
-                Return ONLY the Python code, nothing else.
-                """,
-                }
-            ],
-        )
-
-        cleaned_code = clean_code(response)
-        # Fix squares for visual equal-sidedness
-        cleaned_code = fix_square_spacing(cleaned_code)
-
-        print("✅ Code generated successfully")
-
-        return {
-            "success": True,
-            "code": cleaned_code,
-            "task": task_description,
-            "language": language,
-            "error": None,
-        }
-
-    except Exception as e:
-        print(f"❌ Code generation error: {e}")
-        fallback_code = f"""# Code generation error: {e}
-# Task: {task_description}
-
-def main():
-    print("Code was not generated due to error")
-    print("Task: {task_description}")
-
-if __name__ == "__main__":
-    main()
-"""
-        return {
-            "success": False,
-            "code": fallback_code,
-            "task": task_description,
-            "language": language,
-            "error": str(e),
-        }
-
-
-def save_code(code: str, task_name: str, task_id: int = 1) -> str:
-    """Сохраняет код в файл с организованной структурой"""
-    try:
-        # Создаем папку для сгенерированного кода
-        output_dir = "generated_code"
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
-
-        # Создаем имя файла
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        safe_name = "".join(
-            c for c in task_name if c.isalnum() or c in (" ", "-", "_")
-        ).strip()
-        safe_name = safe_name.replace(" ", "_").lower()
-
-        filename = f"task_{task_id}_{safe_name}_{timestamp}.py"
-        filepath = os.path.join(output_dir, filename)
-
-        # Сохраняем код
-        with open(filepath, "w", encoding="utf-8") as f:
-            f.write(code)
-
-        print(f"✅ Код сохранен: {filepath}")
-        return filepath
-
-    except Exception as e:
-        print(f"❌ Ошибка сохранения: {e}")
-        return ""
+from g4f.integration.langchain import ChatAI
 
 
 def get_language_choice():
-    """Выбор языка интерфейса"""
+    """Language selection for interface"""
     print(
         "\nSelect interface language / Выберите язык интерфейса / Оберіть мову інтерфейсу:"
     )
@@ -164,98 +28,173 @@ def get_language_choice():
         return "en"
 
 
-def load_tasks_from_file(filepath: str):
-    """Loads tasks from file using AI parsing"""
+def ai_translate(llm, text, language):
+    """AI-powered translation - no hardcoding"""
+    if language == "en":
+        return text
+
+    prompt = f"""
+    Translate this interface text to {language} language naturally and appropriately:
+    "{text}"
+
+    Keep emojis and formatting. Return ONLY the translation.
+    """
+
     try:
-        with open(filepath, "r", encoding="utf-8") as f:
-            content = f.read()
+        messages = [{"role": "user", "content": prompt}]
+        response = llm.invoke(messages)
+        return response.content.strip().strip('"')
+    except:
+        return text
 
-        # Use AI to parse tasks
-        print("🤖 AI parsing tasks...")
 
-        response = g4f.ChatCompletion.create(
-            model="gpt-4o",
-            provider=g4f.Provider.PollinationsAI,
-            messages=[
-                {
-                    "role": "user",
-                    "content": f"""
-                Parse this text and extract ALL programming tasks. Return ONLY a JSON array:
-                [
-                    {{"id": 1, "description": "Task description here"}},
-                    {{"id": 2, "description": "Task description here"}},
-                    ...
-                ]
+def get_ui_messages(language, llm):
+    """AI-generated localized UI messages - no hardcoding"""
+    base_messages = {
+        "language_selected": "✅ Language selected:",
+        "task_files_found": "📂 Task files found:",
+        "select_task_file": "📁 Select task file:",
+        "exit": "Exit",
+        "enter_file_number": "Enter file number (0 to exit):",
+        "goodbye": "Goodbye! 👋",
+        "file_selected": "✅ File selected:",
+        "initializing_ai": "🔧 Initializing AI agent...",
+        "ai_ready": "✅ AI agent ready",
+        "file_loaded": "✅ File content loaded",
+        "characters": "characters",
+        "generating_menu": "🎨 Generating task menu...",
+        "tasks_from": "📋 Tasks from",
+        "enter_task_number": "Enter task number to generate code (or 0 to return):",
+        "generating_code": "🔄 Generating code for task",
+        "generated_code": "GENERATED CODE:",
+        "save_code": "Save code to file? (y/n):",
+        "code_saved": "✅ Code saved:",
+        "run_code": "Run generated code? (y/n):",
+        "running_code": "🔄 Running code...",
+        "code_executed": "✅ Code executed successfully",
+        "execution_error": "❌ Execution error:",
+        "ai_error": "❌ AI generation error:",
+        "invalid_file": "❌ Invalid file number. Try again.",
+        "invalid_number": "❌ Enter a valid number.",
+        "save_error": "❌ Save error:",
+    }
 
-                Rules:
-                - Find ALL tasks (1), 2), –, functions, etc.)
-                - Remove task numbers like "1)", "2)" from descriptions
-                - Make first letter uppercase
-                - Include multiplication tables and squares
-                - Include ALL tasks, don't merge duplicates
-                - Return ONLY valid JSON, no explanations
+    # AI translates all messages dynamically
+    translated_messages = {}
+    for key, text in base_messages.items():
+        translated_messages[key] = ai_translate(llm, text, language)
 
-                Text: {content}
-                """,
-                }
-            ],
-        )
+    return translated_messages
 
-        # Parse JSON response
-        import json
-        import re
 
-        cleaned_response = clean_code(response)
+def parse_tasks_from_content(content):
+    """Parse tasks from file content preserving original order"""
+    import re
 
-        try:
-            tasks_data = json.loads(cleaned_response)
-            if isinstance(tasks_data, list):
-                print(f"🔍 Found {len(tasks_data)} tasks in file:")
-                for i, task in enumerate(tasks_data, 1):
-                    desc = task.get("description", "")
-                    short_desc = desc[:60] + "..." if len(desc) > 60 else desc
-                    print(f"   {i}. {short_desc}")
-                return tasks_data
-        except json.JSONDecodeError:
-            # Try to extract JSON array from text
-            json_match = re.search(r"\[.*\]", cleaned_response, re.DOTALL)
-            if json_match:
-                try:
-                    tasks_data = json.loads(json_match.group())
-                    if isinstance(tasks_data, list):
-                        print(f"🔍 Found {len(tasks_data)} tasks in file:")
-                        for i, task in enumerate(tasks_data, 1):
-                            desc = task.get("description", "")
-                            short_desc = desc[:60] + "..." if len(desc) > 60 else desc
-                            print(f"   {i}. {short_desc}")
-                        return tasks_data
-                except json.JSONDecodeError:
-                    pass
+    tasks = []  # Use list to preserve order
+    lines = content.split("\n")
+    task_counter = 1
 
-        print("❌ AI parsing failed, using fallback")
-        return []
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+
+        # Look for various task patterns
+        patterns = [
+            r"^(\d+)\)\s*(.*)",  # "1) task description"
+            r"^(\d+)\.\s*(.*)",  # "1. task description"
+            r"^–\s*(.*)",  # "– task description"
+            r"^\*\s*(.*)",  # "* task description"
+            r"^-\s*(.*)",  # "- task description"
+        ]
+
+        task_found = False
+        for pattern in patterns:
+            match = re.match(pattern, line)
+            if match:
+                if pattern.startswith(r"^(\d+)"):
+                    # Numbered task
+                    task_num = int(match.group(1))
+                    task_text = match.group(2)
+                else:
+                    # Bullet point task
+                    task_num = task_counter
+                    task_text = match.group(1)
+                    task_counter += 1
+
+                if task_text.strip():
+                    tasks.append((task_num, task_text.strip()))
+                task_found = True
+                break
+
+        # Also look for tasks that start with keywords
+        if not task_found:
+            keywords = [
+                "створити функцію",
+                "написати програму",
+                "вивести",
+                "знайти",
+                "видалити",
+                "замінити",
+            ]
+            line_lower = line.lower()
+            if any(keyword in line_lower for keyword in keywords):
+                tasks.append((task_counter, line))
+                task_counter += 1
+
+    return tasks
+
+
+def save_code(code, task_name, task_id=1):
+    """Save generated code to file"""
+    try:
+        output_dir = "generated_code"
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        safe_name = "".join(
+            c for c in task_name if c.isalnum() or c in (" ", "-", "_")
+        ).strip()
+        safe_name = safe_name.replace(" ", "_").lower()
+
+        filename = f"task_{task_id}_{safe_name}_{timestamp}.py"
+        filepath = os.path.join(output_dir, filename)
+
+        with open(filepath, "w", encoding="utf-8") as f:
+            f.write(code)
+
+        return filepath
 
     except Exception as e:
-        print(f"❌ Error reading file {filepath}: {e}")
-        return []
+        print(f"❌ Save error: {e}")
+        return ""
 
 
 def main():
-    """Главная функция"""
+    """Main function"""
     print("🤖 Universal Python Code Generator")
     print("==================================")
-    print("📁 Автоматический выбор файлов заданий из папки 'tasks'")
+    print("AI Model: gpt-4o")
+    print("Provider: LangChain + PollinationsAI")
+    print("Output Directory: generated_code")
 
-    # Выбор языка
+    # Language selection
     language = get_language_choice()
 
-    # Сканируем папку tasks
+    # Initialize AI first for translations
+    llm = ChatAI(model="gpt-4o", provider="PollinationsAI", api_key="")
+    ui = get_ui_messages(language, llm)
+    print(f"{ui['language_selected']} {language}")
+
+    # Check tasks folder
     tasks_dir = "tasks"
     if not os.path.exists(tasks_dir):
-        print(f"❌ Папка {tasks_dir} не найдена!")
+        print(f"❌ Folder {tasks_dir} not found!")
         return
 
-    # Находим файлы заданий
+    # Find task files
     task_files = []
     for filename in os.listdir(tasks_dir):
         if filename.endswith(".txt"):
@@ -271,22 +210,29 @@ def main():
             )
 
     if not task_files:
-        print("❌ В папке tasks не найдено файлов с заданиями (.txt)")
+        print("❌ No task files (.txt) found in tasks folder")
         return
 
-    print(f"\n📂 Найдено файлов заданий: {len(task_files)}")
+    print(f"\n{ui['task_files_found']} {len(task_files)}")
 
-    # Выбор файла заданий
+    # File selection loop
     while True:
-        print("\n📁 Выберите файл с заданиями:")
-        for file in task_files:
-            print(f"{file['id']}. {file['description']} ({file['filename']})")
-        print("0. Выход")
+        print(f"\n{ui['select_task_file']}")
 
-        choice = input("\nВведите номер файла (0 для выхода): ").strip()
+        # Calculate max width for right-aligned numbers
+        max_file_id = max(f["id"] for f in task_files) if task_files else 0
+        file_width = len(str(max_file_id))
+
+        for file in task_files:
+            print(
+                f"{file['id']:>{file_width}}. {file['description']} ({file['filename']})"
+            )
+        print(f"{0:>{file_width}}. {ui['exit']}")
+
+        choice = input(f"\n{ui['enter_file_number']} ").strip()
 
         if choice == "0":
-            print("До свидания! 👋")
+            print(ui["goodbye"])
             return
 
         try:
@@ -294,107 +240,134 @@ def main():
             selected_file = next((f for f in task_files if f["id"] == file_id), None)
 
             if selected_file:
-                print(f"✅ Выбран файл: {selected_file['description']}")
+                print(f"{ui['file_selected']} {selected_file['description']}")
 
-                # Загружаем задачи из файла
-                tasks = load_tasks_from_file(selected_file["filepath"])
+                # Read task file
+                try:
+                    with open(selected_file["filepath"], "r", encoding="utf-8") as f:
+                        file_content = f.read()
+                except UnicodeDecodeError:
+                    with open(selected_file["filepath"], "r", encoding="cp1251") as f:
+                        file_content = f.read()
 
-                if not tasks:
-                    print("❌ Не удалось загрузить задачи из файла")
-                    continue
+                print(f"{ui['file_loaded']} ({len(file_content)} {ui['characters']})")
 
-                print(f"✅ Загружено задач: {len(tasks)}")
+                # Parse tasks from content for exact mapping
+                parsed_tasks = parse_tasks_from_content(file_content)
+                print(
+                    f"📋 {ai_translate(llm, f'Found {len(parsed_tasks)} tasks in file', language)}"
+                )
 
-                # Показываем меню задач
-                while True:
-                    print(f"\n📋 Задачи из файла {selected_file['filename']}:")
-                    print("-" * 70)
+                # Generate menu using AI
+                print(ui["generating_menu"])
 
-                    # Находим максимальную длину номера для выравнивания
-                    max_num_width = len(str(len(tasks)))
+                # Create structured menu from parsed tasks
+                print(f"\n{ui['tasks_from']} {selected_file['filename']}:")
+                print("-" * 50)
 
-                    for i, task in enumerate(tasks, 1):
-                        # Показываем краткое описание (первые 60 символов)
-                        desc = task.get("description", "")
-                        short_desc = desc[:60] + "..." if len(desc) > 60 else desc
-                        # Форматируем с одинаковыми отступами
-                        print(f"{i:>{max_num_width}}. {short_desc}")
+                if parsed_tasks:
+                    # Calculate max width for right-aligned numbers
+                    max_num = (
+                        max(task_num for task_num, _ in parsed_tasks)
+                        if parsed_tasks
+                        else 0
+                    )
+                    width = len(str(max_num))
 
-                    print(f"{0:>{max_num_width}}. Назад к выбору файла")
-                    print("-" * 70)
+                    # Display tasks in original file order
+                    for task_num, task_desc in parsed_tasks:
+                        # Right-align the number with proper spacing
+                        print(f"{task_num:>{width}}. {task_desc}")
+                else:
+                    print(
+                        f"❌ {ai_translate(llm, 'Failed to parse tasks from file', language)}"
+                    )
 
-                    task_choice = input("\nВыберите задачу (0 для возврата): ").strip()
+                print("-" * 50)
 
-                    if task_choice == "0":
-                        break
+                # Simple task selection
+                task_choice = input(f"\n{ui['enter_task_number']} ").strip()
 
+                if task_choice != "0":
                     try:
-                        task_id = int(task_choice)
-                        if 1 <= task_id <= len(tasks):
-                            selected_task = tasks[task_id - 1]
+                        task_num = int(task_choice)
+                        # Find task in list
+                        exact_task = None
+                        for num, desc in parsed_tasks:
+                            if num == task_num:
+                                exact_task = desc
+                                break
 
-                            print(f"\n📝 Выбрана задача {task_id}:")
+                        if exact_task:
+                            print(f"{ui['generating_code']} {task_choice}...")
                             print(
-                                f"📋 Описание: {selected_task.get('description', '')}"
+                                f"📝 {ai_translate(llm, f'Exact task: {exact_task}', language)}"
                             )
 
-                            # Генерируем код
-                            result = generate_code(
-                                selected_task.get("description", ""), language
-                            )
+                            code_prompt = f"""
+                                Generate Python code for this EXACT task:
 
-                            # Показываем код
-                            print("\n" + "=" * 50)
-                            if result["success"]:
-                                print("СГЕНЕРИРОВАННЫЙ КОД:")
-                                print("=" * 50)
-                                print(result["code"])
-                                print("=" * 50)
+                                Task number: {task_num}
+                                Task description: {exact_task}
 
-                                # Сохраняем код
-                                save_choice = input(
-                                    "\nСохранить код в файл? (y/n): "
-                                ).lower()
-                                if save_choice == "y":
-                                    filepath = save_code(
-                                        result["code"], f"task_{task_id}", task_id
-                                    )
-                                    if filepath:
-                                        print(f"Файл сохранен: {filepath}")
+                                Requirements:
+                                - Generate code ONLY for this specific task description
+                                - Clean, executable Python code
+                                - Add comments in {language} language
+                                - NO markdown blocks
+                                - Complete working solution
+                                - For squares: use spaces between asterisks for visual equal-sidedness
 
-                                        # Предлагаем запустить код
-                                        run_choice = input(
-                                            "Запустить сгенерированный код? (y/n): "
-                                        ).lower()
-                                        if run_choice == "y":
-                                            try:
-                                                print("\n🔄 Запускаем код...")
-                                                print("-" * 30)
-                                                exec(result["code"])
-                                                print("-" * 30)
-                                                print("✅ Код выполнен успешно")
-                                            except Exception as e:
-                                                print(f"❌ Ошибка выполнения: {e}")
-                            else:
-                                print("ОШИБКА ГЕНЕРАЦИИ КОДА:")
-                                print("=" * 50)
-                                print(f"Ошибка: {result['error']}")
-                                print("Fallback код:")
-                                print(result["code"])
-                                print("=" * 50)
+                                Task to implement: {exact_task}
+                                """
                         else:
-                            print("❌ Неверный номер задачи")
-
+                            print(
+                                f"❌ {ai_translate(llm, f'Task {task_choice} not found in file', language)}"
+                            )
+                            continue
                     except ValueError:
-                        print("❌ Введите корректный номер")
+                        print(
+                            f"❌ {ai_translate(llm, f'Invalid task number: {task_choice}', language)}"
+                        )
+                        continue
 
+                    code_messages = [{"role": "user", "content": code_prompt}]
+                    code_response = llm.invoke(code_messages)
+
+                    print("\n" + "=" * 50)
+                    print(ui["generated_code"])
+                    print("=" * 50)
+                    print(code_response.content)
+                    print("=" * 50)
+
+                    # Save code option
+                    save_choice = input(f"\n{ui['save_code']} ").lower()
+                    if save_choice == "y":
+                        filepath = save_code(
+                            code_response.content,
+                            f"task_{task_choice}",
+                            int(task_choice),
+                        )
+                        if filepath:
+                            print(f"{ui['code_saved']} {filepath}")
+                            # Offer to run code
+                            run_choice = input(f"{ui['run_code']} ").lower()
+                            if run_choice == "y":
+                                try:
+                                    print(f"\n{ui['running_code']}")
+                                    print("-" * 30)
+                                    exec(code_response.content)
+                                    print("-" * 30)
+                                    print(ui["code_executed"])
+                                except Exception as e:
+                                    print(f"{ui['execution_error']} {e}")
             else:
-                print("❌ Неверный номер файла. Попробуйте еще раз.")
+                print(ui["invalid_file"])
 
         except ValueError:
-            print("❌ Введите корректный номер файла.")
+            print(ui["invalid_number"])
         except KeyboardInterrupt:
-            print("\n\nДо свидания! 👋")
+            print(f"\n\n{ui['goodbye']}")
             return
 
 
