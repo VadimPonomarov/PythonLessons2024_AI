@@ -12,41 +12,44 @@ An AI-powered system for generating Python code from task descriptions with inte
 - **🎯 Interactive Menus**: User-friendly navigation with proper formatting
 - **🛡️ Robust Error Handling**: Fallback mechanisms and graceful degradation
 
-## 🚀 Quick Demo
+## 🚀 Quick Start
 
-**First time using the project?** Run the demonstration:
+**Ready to use?** Simply run:
 
 ```bash
-python demo.py
+python main.py
 ```
 
-This will show you:
-1. 🤖 AI parsing tasks from `task_1.txt`
-2. 🔄 Code generation for a square drawing task
+This is the main entry point that includes:
+1. 🤖 AI parsing tasks from text files
+2. 🔄 Code generation with proper comments
 3. 🎨 Visual spacing fixes for equal-sided squares
-4. 💾 Saving and running the generated code
+4. 💾 Saving and running generated code
 
 ## 📁 Project Structure
 
 ```
 📁 PythonLessons2024_AI/
-├── 🎯 demo.py                   # Demonstration test - START HERE!
-├── 🚀 main.py                   # Main application entry point
-├── 🤖 ai_parser_main.py         # AI-powered version with task parsing
+├── 🚀 main.py                   # Main application - START HERE!
 ├── 📄 README.md                 # This documentation
 ├── 📄 pyproject.toml           # Poetry configuration
-├── 📁 agents/                  # AI agent modules
+├── 📁 tasks/                   # Task files directory
+│   ├── 📄 task_1.txt          # Programming tasks (Ukrainian) - 17+ tasks
+│   └── 📄 task_2.txt          # Additional tasks
+├── 📁 generated_code/          # Output directory for generated code
+│   └── 📄 *.py                 # Generated Python files
+├── 📁 agents/                  # AI agent modules (advanced features)
 │   ├── 📄 fixed_pollinations.py # Fixed PollinationsAI provider
 │   └── 📄 universal_agents.py   # Universal AI agents
-├── 📁 core/                    # Core functionality
+├── 📁 core/                    # Core functionality (advanced features)
 │   ├── 📄 models.py            # Pydantic models
 │   └── 📄 universal_generator.py # Code generation logic
-├── 📁 tasks/                   # Task files directory
-│   ├── 📄 task_1.txt          # Programming tasks (Ukrainian) - 14 tasks
-│   └── 📄 task_2.txt          # Additional tasks
-└── 📁 generated_code/          # Output directory for generated code
-    └── 📄 *.py                 # Generated Python files
+└── 📁 config/                  # Configuration constants
+    └── 📄 constants.py         # Localization and settings
 ```
+
+**For beginners**: You only need `main.py` and the `tasks/` folder!
+**For advanced users**: Explore `agents/` and `core/` for extensibility.
 
 ## 🛠️ Installation
 
@@ -68,17 +71,16 @@ This will show you:
 
 ## 🎮 Usage
 
-### 🎯 Demo (Recommended for first-time users)
+### 🚀 Main Application (Start Here!)
 ```bash
-python demo.py
+python main.py
 ```
 
-### 🚀 Full Application
-```bash
-python ai_parser_main.py  # AI-powered version (recommended)
-# or
-python main.py           # Original version
-```
+This is the complete application with:
+- AI-powered task parsing
+- Multi-language interface
+- Visual code improvements
+- All features included
 
 ### 📋 Workflow
 
@@ -100,7 +102,38 @@ The system finds **ALL** tasks including:
 ✅ **Multiplication tables**: `табличку множення`
 ✅ **While/for loops**: All loop types
 
-**Example**: From `task_1.txt` → **14 tasks found** (vs 7 with manual parsing)
+**Example**: From `task_1.txt` → **17+ tasks found** (vs 7 with manual parsing)
+
+## 🎯 What You'll See
+
+When you run `python main.py`:
+
+```
+🤖 Universal Python Code Generator
+==================================
+AI-powered code generation with intelligent task parsing
+
+Select interface language / Выберите язык интерфейса / Оберіть мову інтерфейсу:
+1. English (en) [default]
+2. Українська (uk)
+3. Русский (ru)
+Enter choice (1-3) [1]:
+
+📂 Task files found: 2
+
+📁 Select task file:
+1. Task 1 (task_1.txt)
+2. Task 2 (task_2.txt)
+0. Exit
+
+🤖 AI parsing tasks...
+✅ Found 17 tasks in file:
+   1. Write a program that selects digits from an input string...
+   2. Write a program that selects numbers from an input string...
+   ...
+   12. Display an empty square made of '*' characters...
+   13. Display multiplication table using while loop...
+```
 
 ## 🎨 Visual Improvements
 
@@ -167,6 +200,8 @@ pydantic-ai = "*"
 ## 🎉 Success Examples
 
 ### ✅ Found Tasks (AI Parsing)
+From `task_1.txt`, the AI finds **17+ tasks** including:
+
 1. Extract digits from string
 2. Extract numbers from string
 3. List comprehension - uppercase characters
@@ -181,13 +216,17 @@ pydantic-ai = "*"
 12. **Empty square with asterisks** ⭐
 13. **Multiplication table with while loop** ⭐⭐
 14. Convert to menu system
+15. Find minimum number in list
+16. Remove duplicates from list
+17. Replace every 4th element with 'X'
 
 ### 🎨 Generated Code Quality
 - ✅ Clean, executable Python
 - ✅ Proper comments in selected language
-- ✅ Visual fixes for squares
-- ✅ Error handling
-- ✅ Best practices
+- ✅ Visual fixes for squares (equal-sided)
+- ✅ Error handling and edge cases
+- ✅ Python best practices
+- ✅ Complete working solutions
 
 ## 🚨 Troubleshooting
 
@@ -206,9 +245,27 @@ pydantic-ai = "*"
 
 1. Fork the repository
 2. Create a feature branch
-3. Test with `python demo.py`
+3. Test with `python main.py`
 4. Submit a pull request
 
 ## 📄 License
 
 MIT License - Open source and free to use.
+
+---
+
+## 🚀 Ready to Start?
+
+Simply run:
+```bash
+python main.py
+```
+
+The system will guide you through:
+- Language selection
+- Task file selection
+- AI task parsing
+- Code generation
+- Saving and execution
+
+**Everything you need is in one file!** 🎯
