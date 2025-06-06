@@ -1,0 +1,4 @@
+/.venv
+/.idea
+/.mypy_cache
+/generated_code
